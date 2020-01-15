@@ -22,6 +22,8 @@ A SourceMod mapchooser plugin designed for use with shavits timer
  - smc_mapvote_runoffpercent (Default = 50, Min = 0, Max = 100) - If winning choice has less than this percent of votes, hold a runoff 
  - smc_mapvote_revotetime (Default = 0, Min = 0) - How many seconds after a failed mapvote before rtv is enabled again
  - smc_display_timeleft (Default = 1, Min = 0, Max = 1) - Display remaining messages in chat
+ - smc_nominate_matches (Default = 1, Min = 0, Max = 1) - Prompts a menu which shows all maps which match argument
+ - smc_enhanced_menu (Default = 1, Min = 0, Max = 1) - Nominate menu can show maps by alphabetic order and tiers
 ## Available Commands
 
 ### Admin Commands
