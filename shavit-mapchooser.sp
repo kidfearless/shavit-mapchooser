@@ -191,7 +191,6 @@ public void OnConfigsExecuted()
 	// cache the nominate menu so that it isn't being built every time player opens it
 }
 
-
 public void OnMapEnd()
 {
 	if( g_cvMapVoteBlockMapInterval.IntValue > 0 )
@@ -882,10 +881,20 @@ void SMC_NominateMatches( int client, const char[] mapname)
 			{
 				ReplyToCommand( client, "[SMC] %t", "Map was not found", mapname );	
 			}
+
+			if (subNominateMenu != INVALID_HANDLE)
+			{
+				CloseHandle(subNominateMenu);
+			}
     	}
    		case 1:
    		{
 			Nominate( client, map );
+
+			if (subNominateMenu != INVALID_HANDLE)
+			{
+				CloseHandle(subNominateMenu);
+			}
    		}
    		default: 
    		{
@@ -1108,7 +1117,7 @@ void CreateEnhancedMenu()
 	}
 }
 
-bool DoesTierExist(int tier) 
+bool DoesTierExist( int tier ) 
 {
 	int length = g_aMapList.Length;
 	for( int i = 0; i < length; ++i ) 
@@ -1187,11 +1196,7 @@ void OpenNominateMenuTier( int client, int tier )
 
 public int NominateMenuHandler( Menu menu, MenuAction action, int param1, int param2 )
 {
-	if ( action == MenuAction_End ) 
-	{
-		delete menu;
-	}
-	else if( action == MenuAction_Select )
+	if( action == MenuAction_Select )
 	{
 		char mapname[PLATFORM_MAX_PATH];
 		menu.GetItem( param2, mapname, sizeof( mapname ) );
@@ -1202,15 +1207,18 @@ public int NominateMenuHandler( Menu menu, MenuAction action, int param1, int pa
 	{
 		OpenEnhancedMenu( param1 );
 	}
+	else if ( action == MenuAction_End ) 
+	{
+		if (menu != g_hNominateMenu && menu != INVALID_HANDLE) 
+		{
+			CloseHandle( menu );
+		}
+	}
 }
 
 public int EnhancedMenuHandler( Menu menu, MenuAction action, int client, int param2) 
 {
-	if ( action == MenuAction_End ) 
-	{
-		delete menu;
-	}
-	else if ( action == MenuAction_Select ) 
+	if ( action == MenuAction_Select ) 
 	{
 		char option[PLATFORM_MAX_PATH];
 		menu.GetItem( param2, option, sizeof( option ) );
@@ -1603,4 +1611,3 @@ stock void DebugPrint( const char[] message, any ... )
 		}
 	}
 }
-
