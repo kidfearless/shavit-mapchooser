@@ -1504,7 +1504,7 @@ stock int GetRTVVotesNeeded()
 	int rtvcount = 0;
 	for( int i = 1; i <= MaxClients; i++ )
 	{
-		if( IsClientInGame( i ) )
+		if( IsClientInGame( i ) && !IsFakeClient(i))
 		{
 			// dont count players that can't vote
 			if( !g_cvRTVAllowSpectators.BoolValue && IsClientObserver( i ) )
