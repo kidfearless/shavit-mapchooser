@@ -166,6 +166,7 @@ public void OnPluginStart()
 
 	AddCommandListener( Command_SMap, "sm_smap" );
 	AddCommandListener( Command_SMap, "sm_map" );
+	AddCommandListener( Listener_Nextmap, "nextmap" );
 
 	sm_nextmap = FindConVar( "sm_nextmap" );
 	//mp_maxrounds = FindConVar( "mp_maxrounds" );
@@ -490,7 +491,6 @@ public void OnClientDisconnect_Post( int client )
 	CheckRTV();
 }
 
-
 public void OnClientSayCommand_Post( int client, const char[] command, const char[] sArgs )
 {
 	if( StrEqual( sArgs, "rtv", false ) || StrEqual( sArgs, "rockthevote", false ) )
@@ -508,20 +508,6 @@ public void OnClientSayCommand_Post( int client, const char[] command, const cha
 		Command_Nominate( client, 0 );
 
 		SetCmdReplySource( old );
-	}
-	if( !IsChatTrigger() )
-	{
-		if ( strcmp( sArgs, "nextmap", false ) == 0 )
-		{
-			if ( g_cNextMap[0] == 0 )
-			{
-				PrintToChatAll( "[SMC] %t", "Pending Vote" );
-			}
-			else
-			{
-				PrintToChatAll( "[SMC] %t [T%i]", "Next Map", g_cNextMap, Shavit_GetMapTier( g_cNextMap ) );
-			}
-		}
 	}
 }
 
@@ -1138,6 +1124,25 @@ public Action Command_SMap( int client, const char[] command, int argc )
 
 
 	return Plugin_Stop;
+}
+
+public Action Listener_Nextmap( int client, const char[] command, int argc )
+{
+	if ( client && !IsClientInGame( client ) )
+	{
+		return Plugin_Handled;
+	}
+
+	if ( g_cNextMap[0] == 0 )
+	{
+		ReplyToCommand( client, "[SMC] %t", "Pending Vote" );
+	}
+	else
+	{
+		ReplyToCommand( client, "[SMC] %t [%i]", "Next Map", g_cNextMap, Shavit_GetMapTier( g_cNextMap ) );
+	}
+
+	return Plugin_Handled;
 }
 
 public Action Command_Nextmap( int client, int args )
