@@ -55,7 +55,7 @@ StringMap g_smMapList;
 char g_cMapName[PLATFORM_MAX_PATH];
 char g_cNextMap[PLATFORM_MAX_PATH];
 
-int g_iCurrentMapID;
+char g_cCurrentMapID[32];
 
 MapChange g_ChangeTime;
 
@@ -128,7 +128,7 @@ public void OnPluginStart()
 	LoadTranslations( "basetriggers.phrases" );
 
 	g_aMapList = new ArrayList( ByteCountToCells( PLATFORM_MAX_PATH ) );
-	g_aOldMaps = new ArrayList();
+	g_aOldMaps = new ArrayList(ByteCountToCells( 32 ));
 
 	g_smMapList = new StringMap();
 
@@ -200,7 +200,7 @@ public void OnMapStart()
 	ReplaceString( g_cMapName, PLATFORM_MAX_PATH, "workshop/", "", false) ;
 	ExplodeString( g_cMapName, "/", mapsplit, 2, 64 );
 
-	g_iCurrentMapID = StringToInt( mapsplit[0] );
+	strcopy(g_cCurrentMapID, 32, mapsplit[0]);
 	g_cMapName = mapsplit[1];
 
 	g_fMapStartTime = GetGameTime();
@@ -241,7 +241,7 @@ public void Event_MatchEnd( Event event, const char[] name, bool dontBroadcast )
 
 	if( g_cvMapVoteBlockMapInterval.IntValue > 0 )
 	{
-		g_aOldMaps.Push( g_iCurrentMapID );
+		g_aOldMaps.PushString( g_cCurrentMapID );
 		if( g_aOldMaps.Length > g_cvMapVoteBlockMapInterval.IntValue )
 		{
 			g_aOldMaps.Erase( 0 );
@@ -579,8 +579,8 @@ void InitiateMapVote( MapChange when )
 	{
 		int rand = GetRandomInt( 0, g_aMapList.Length - 1 );
 		g_aMapList.GetString( rand, map, sizeof( map ) );
-		int id = -1;
-		g_smMapList.GetValue( map, id );
+		char id[32];
+		g_smMapList.GetString( map, id, 32 );
 
 		if( StrEqual( map, g_cMapName ) )
 		{
@@ -589,7 +589,7 @@ void InitiateMapVote( MapChange when )
 			continue;
 		}
 
-		int idx = g_aOldMaps.FindValue( id );
+		int idx = g_aOldMaps.FindString( id );
 		if( idx != -1 )
 		{
 			// map already played recently, get another map
@@ -905,14 +905,15 @@ public void LoadMapListCallback( Database db, DBResultSet results, const char[] 
 	while( results.FetchRow() )
 	{
 		char map[PLATFORM_MAX_PATH];
+		char id[32];
 
-		int id = results.FetchInt( 0 );
+		results.FetchString( 0, id, sizeof( id ) );
 		results.FetchString( 1, map, sizeof( map ) );
 
 		//no validation since maps will be downloaded regardless
 
 		g_aMapList.PushString( map );
-		g_smMapList.SetValue( map, id, true );
+		g_smMapList.SetString( map, id, true );
 	}
 
 	SortADTArrayCustom(g_aMapList, SortNominateMenu);
@@ -971,21 +972,21 @@ public Action Timer_ChangeMap( Handle timer )
 {
 	static int s_LastAttemptTime = 0;
 
-	int id;
-	g_smMapList.GetValue( g_cNextMap, id );
-	PrintToConsoleAll( "map: '%s' id: '%i'",g_cNextMap, id );
+	char id[32];
+	g_smMapList.GetString( g_cNextMap, id, 32 );
+	PrintToConsoleAll( "map: '%s' id: '%s'", g_cNextMap, id );
 
 	char message[256];
-	FormatEx( message, sizeof( message ), "#### Debug Print: Changed map to %i", id );
+	FormatEx( message, sizeof( message ), "#### Debug Print: Changed map to %s", id );
 	DebugPrint( message );
 	if((GetTime() - s_LastAttemptTime) > 10)
 	{
-		ServerCommand( "host_workshop_map %i", id );
+		ServerCommand( "host_workshop_map %s", id );
 		s_LastAttemptTime = GetTime();
 	}
 	else
 	{
-		LogMessage("Server Attempted multiple map changes. \nmap: '%s' id: '%i'", g_cNextMap, id);
+		LogMessage("Server Attempted multiple map changes. \nmap: '%s' id: '%s'", g_cNextMap, id);
 	}
 
 	return Plugin_Handled;
@@ -1044,17 +1045,17 @@ public Action Command_Nominate( int client, int args )
 	GetCmdArg( 1, mapname, sizeof( mapname ) );
 	if( SMC_FindMap( mapname, mapname, sizeof( mapname ) ) )
 	{
-		int currentid, newid;
-		g_smMapList.GetValue( mapname, newid );
-		g_smMapList.GetValue( g_cMapName, currentid );
+		char currentid[32], newid[32];
+		g_smMapList.GetString( mapname, newid, 32 );
+		g_smMapList.GetString( g_cMapName, currentid, 32 );
 		// check for workshop id instead of map names
-		if( currentid == newid )
+		if( StrEqual(currentid, newid ))
 		{
 			ReplyToCommand( client, "[SMC] %t", "Can't Nominate Current Map" );
 			return Plugin_Handled;
 		}
 
-		int idx = g_aOldMaps.FindValue( newid );
+		int idx = g_aOldMaps.FindString( newid );
 		if( idx != -1 )
 		{
 			ReplyToCommand( client, "[SMC] %s %t", mapname, "Recently Played" );
@@ -1130,7 +1131,7 @@ public Action Listener_Nextmap( int client, const char[] command, int argc )
 {
 	if ( client && !IsClientInGame( client ) )
 	{
-		return Plugin_Handled;
+		return Plugin_Stop;
 	}
 
 	if ( g_cNextMap[0] == 0 )
@@ -1142,7 +1143,7 @@ public Action Listener_Nextmap( int client, const char[] command, int argc )
 		ReplyToCommand( client, "[SMC] %t [%i]", "Next Map", g_cNextMap, Shavit_GetMapTier( g_cNextMap ) );
 	}
 
-	return Plugin_Handled;
+	return Plugin_Stop;
 }
 
 public Action Command_Nextmap( int client, int args )
@@ -1190,16 +1191,16 @@ void CreateNominateMenu()
 		char mapname[PLATFORM_MAX_PATH];
 		g_aMapList.GetString( i, mapname, sizeof( mapname ) );
 
-		int currentid, newid;
-		g_smMapList.GetValue( mapname, newid );
-		g_smMapList.GetValue( g_cMapName, currentid );
+		char currentid[32], newid[32];
+		g_smMapList.GetString( mapname, newid, 32 );
+		g_smMapList.GetString( g_cMapName, currentid, 32 );
 		// check for workshop id instead of map names
-		if( currentid == newid )
+		if( StrEqual(currentid, newid) )
 		{
 			style = ITEMDRAW_DISABLED;
 		}
 
-		int idx = g_aOldMaps.FindValue( newid );
+		int idx = g_aOldMaps.FindString( newid );
 		if( idx != -1 )
 		{
 			style = ITEMDRAW_DISABLED;
@@ -1773,7 +1774,7 @@ void DB_FindMap( char[] id )
 {
 	char buffer[512];
 	
-	FormatEx( buffer, sizeof( buffer ), "SELECT WorkshopID, Map FROM db_maplist WHERE WorkshopID = %i ORDER BY Map ASC LIMIT 1", StringToInt( id ) );
+	FormatEx( buffer, sizeof( buffer ), "SELECT WorkshopID, Map FROM db_maplist WHERE WorkshopID = '%s' ORDER BY Map ASC LIMIT 1", id );
 	g_hDatabase.Query( FindMapCallback, buffer, _, DBPrio_Low );
 }
 
@@ -1788,10 +1789,12 @@ public void FindMapCallback( Database db, DBResultSet results, const char[] erro
 	if(results.FetchRow())
 	{
 		char map[PLATFORM_MAX_PATH];
-		int id = results.FetchInt( 0 );
+		char id[32];
+
+		results.FetchString( 0, id, sizeof( id ) );
 		results.FetchString( 1, map, sizeof( map ) );
 
-		g_smMapList.SetValue( map, id, true );//ensure that the map is in the maplist properly
+		g_smMapList.SetString( map, id, true );//ensure that the map is in the maplist properly
 		
 
 		PrintToChatAll( "[SMC] Force Changing Map To: %s", map );
