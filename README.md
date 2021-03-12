@@ -24,6 +24,8 @@ A SourceMod mapchooser plugin designed for use with shavits timer
  - smc_display_timeleft (Default = 1, Min = 0, Max = 1) - Display remaining messages in chat
  - smc_nominate_matches (Default = 1, Min = 0, Max = 1) - Prompts a menu which shows all maps which match argument
  - smc_enhanced_menu (Default = 1, Min = 0, Max = 1) - Nominate menu can show maps by alphabetic order and tiers
+ - smc_min_tier (Default = 0, Min = 0, Max = 10) - The minimum tier to show on the enhanced menu
+ - smc_max_tier (Default = 10, Min = 0, Max = 10) - The maximum tier to show on the enhanced menu 
 ## Available Commands
 
 ### Admin Commands
